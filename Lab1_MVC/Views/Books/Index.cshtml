@@ -1,53 +1,20 @@
-@model IEnumerable<Lab1_MVC.Models.Book>
+@model IEnumerable<BookRow>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Catalog";
 }
 
-<h1>Index</h1>
+<h1>Catalog</h1>
+<p><a asp-action="Create">Create New</a></p>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
 <table class="table">
     <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Title)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Author)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Price)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Genre)
-            </th>
-            <th></th>
-        </tr>
+    <tr><th>Titlu</th><th>Autor</th><th>Comenzi</th></tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Title)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Author)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Price)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Genre.Name)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.ID">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.ID">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.ID">Delete</a>
-            </td>
-        </tr>
-}
+    @foreach (var r in Model)
+    {
+        <tr><td>@r.Title</td><td>@r.Author</td><td>@r.Orders</td></tr>
+    }
     </tbody>
 </table>

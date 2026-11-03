@@ -7,23 +7,34 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Lab1_MVC.Models;
 using Lab1_MVC.Data;
+using System.Diagnostics;
 
 namespace Lab1_MVC.Controllers
 {
     public class BooksController : Controller
     {
         private readonly LibraryContext _context;
+        private readonly ILogger<BooksController> _logger;
 
-        public BooksController(LibraryContext context)
+        public BooksController(LibraryContext context, ILogger<BooksController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Books
         public async Task<IActionResult> Index()
         {
-            var libraryContext = _context.Book.Include(b => b.Genre);
-            return View(await libraryContext.ToListAsync());
+            var sw = Stopwatch.StartNew();
+
+            var rows = await _context.Book
+                .Select(b => new BookRow(b.Title,
+                    b.Author!.FirstName + " " + b.Author.LastName,
+                    b.Orders.Count))
+                .ToListAsync();
+
+            _logger.LogInformation("Index: {Ms} ms", sw.ElapsedMilliseconds);
+            return View(rows);
         }
 
         // GET: Books/Details/5
@@ -49,6 +60,7 @@ namespace Lab1_MVC.Controllers
         public IActionResult Create()
         {
             ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "Name");
+            ViewData["AuthorID"] = new SelectList(_context.Author, "ID", "FullName");
             return View();
         }
 
@@ -57,7 +69,7 @@ namespace Lab1_MVC.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Title,Author,Price,GenreID")] Book book)
+        public async Task<IActionResult> Create([Bind("ID,Title,AuthorID,Price,GenreID")] Book book)
         {
             if (ModelState.IsValid)
             {
@@ -66,6 +78,7 @@ namespace Lab1_MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "Name", book.GenreID);
+            ViewData["AuthorID"] = new SelectList(_context.Author, "ID", "FullName", book.AuthorID);
             return View(book);
         }
 
@@ -83,43 +96,34 @@ namespace Lab1_MVC.Controllers
                 return NotFound();
             }
             ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "Name", book.GenreID);
-            return View(book);
+            ViewData["AuthorID"] = new SelectList(_context.Author, "ID", "FullName", book.AuthorID);
+            var vm = new BookEditViewModel
+            {
+                ID = book.ID, Title = book.Title, Price = book.Price,
+                AuthorID = book.AuthorID, GenreID = book.GenreID
+            };
+            return View(vm);
         }
 
         // POST: Books/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Title,Author,Price,GenreID")] Book book)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, BookEditViewModel vm)
         {
-            if (id != book.ID)
+            if (id != vm.ID) return NotFound();
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                ViewData["GenreID"] = new SelectList(_context.Genre, "ID", "Name", vm.GenreID);
+                ViewData["AuthorID"] = new SelectList(_context.Author, "ID", "FullName", vm.AuthorID);
+                return View(vm);
             }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(book);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!BookExists(book.ID))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "Name", book.GenreID);
-            return View(book);
+            var book = await _context.Book.FindAsync(id);
+            if (book is null) return NotFound();
+            book.Title = vm.Title; book.Price = vm.Price;
+            book.AuthorID = vm.AuthorID; book.GenreID = vm.GenreID;
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Books/Delete/5
@@ -132,6 +136,7 @@ namespace Lab1_MVC.Controllers
 
             var book = await _context.Book
                 .Include(b => b.Genre)
+                .Include(b => b.Author)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (book == null)
             {

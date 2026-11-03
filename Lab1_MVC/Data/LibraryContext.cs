@@ -1,19 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Lab1_MVC.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace Lab1_MVC.Data
+namespace Lab1_MVC.Data;
+
+public class LibraryContext(DbContextOptions<LibraryContext> options) : DbContext(options)
 {
-    public class LibraryContext : DbContext
-    {
-        public LibraryContext (DbContextOptions<LibraryContext> options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Lab1_MVC.Models.Book> Book { get; set; } = default!;
-    }
+    public DbSet<Book> Book { get; set; } = default!;
+    public DbSet<Author> Author { get; set; } = default!;
+    public DbSet<Genre> Genre { get; set; } = default!;
+    public DbSet<Publisher> Publisher { get; set; } = default!;
+    public DbSet<Customer> Customer { get; set; } = default!;
+    public DbSet<Order> Order { get; set; } = default!;
 }

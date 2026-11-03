@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Lab1_MVC.Data;
+using Microsoft.Extensions.ML;
+using Lab1_MVC.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<LibraryContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("LibraryContext") ?? throw new InvalidOperationException("Connection string 'LibraryContext' not found.")));
@@ -8,7 +11,20 @@ builder.Services.AddDbContext<LibraryContext>(options =>
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services
+    .AddPredictionEnginePool<BookRating, BookRatingPrediction>()
+    .FromFile(modelName: "BookRecommender",
+        filePath: "MLModels/BookRecommender.zip",
+        watchForChanges: true);
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<LibraryContext>();
+    db.Database.Migrate();
+    LibrarySeed.Seed(db);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
